@@ -38,7 +38,9 @@ struct ModuleRouterExpandedView: View {
             metrics: configuration.metrics,
             motion: configuration.motion,
             typography: configuration.typography,
-            width: configuration.expandedWidth ?? NookLayout.width,
+            width: configuration.expandedWidth
+                ?? appState.appearancePreferences.expandedNotchWidth
+                ?? NookLayout.width,
             // Only fold a switcher into the chrome when the host opted in; otherwise the
             // surface is untouched and switching lives in the menu bar / hotkeys.
             moduleSwitcher: leadingClusterSwitcher

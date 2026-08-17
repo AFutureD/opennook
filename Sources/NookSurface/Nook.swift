@@ -10,6 +10,11 @@ import AppKit
 import Combine
 import SwiftUI
 
+/// Shared geometry defaults that hosts may use when seeding persistent controls.
+public enum NookGeometryDefaults {
+    public static let compactNotchWidth: CGFloat = 64
+}
+
 /// A notch-pinned floating panel with `expanded` / `compact` / `hidden` states.
 ///
 /// Three SwiftUI view types compose the surface:
@@ -115,6 +120,15 @@ where Expanded: View, CompactLeading: View, CompactTrailing: View {
     @Published public private(set) var state: NookState = .hidden
     @Published private(set) var notchSize: CGSize = .zero
     @Published private(set) var menubarHeight: CGFloat = 0
+
+    /// Host-tunable virtual gap between compact leading/trailing slots. A physical
+    /// camera housing remains the lower bound on notched displays.
+    @Published public var compactNotchWidth: CGFloat = NookGeometryDefaults.compactNotchWidth
+
+    /// Width of the physical camera housing on the current screen, or zero when the
+    /// selected screen has no notch. Kept separate from the virtual fallback so hosts
+    /// can make the virtual gap narrower without ever overlapping real hardware.
+    @Published private(set) var physicalNotchWidth: CGFloat = 0
 
     /// Layout resolved for the current window's screen - `.notch` or `.floating`.
     /// Recomputed every time the panel window is built (see `initializeWindow`); drives
@@ -303,6 +317,12 @@ where Expanded: View, CompactLeading: View, CompactTrailing: View {
     var effectiveOpeningAnimation: Animation { transitionConfiguration.openingAnimation ?? style.openingAnimation }
     var effectiveClosingAnimation: Animation { transitionConfiguration.closingAnimation ?? style.closingAnimation }
     var effectiveConversionAnimation: Animation { transitionConfiguration.conversionAnimation ?? style.conversionAnimation }
+    var effectiveExpansionAnimation: Animation {
+        transitionConfiguration.expansionAnimation ?? effectiveConversionAnimation
+    }
+    var effectiveStateConversionAnimation: Animation {
+        state == .expanded ? effectiveExpansionAnimation : effectiveConversionAnimation
+    }
 
     /// When the chrome becomes visible (state transitions out of `.hidden`), replay any
     /// feedback that was requested during the boot race. Single sink keeps lifetime tied
@@ -612,9 +632,9 @@ extension Nook {
 
         if needsNewWindow {
             initializeWindow(screen: screen, orderFront: false)
-            withAnimation(effectiveOpeningAnimation) { state = .expanded }
+            withAnimation(effectiveExpansionAnimation) { state = .expanded }
             showWindow()
-            try? await Task.sleep(for: openSettleDuration)
+            try? await Task.sleep(for: expansionOpenSettleDuration)
             // A screen-parameter change during the settle could have rebuilt the
             // window underneath us; bail rather than return success on a defunct view.
             // `Task.isCancelled` belt-and-suspenders matches `_hide`'s pattern - a
@@ -629,8 +649,8 @@ extension Nook {
                 // A newer transition may have superseded us across the sleep.
                 guard isCurrent(generation), !Task.isCancelled, state == .hidden else { return }
             }
-            withAnimation(effectiveConversionAnimation) { state = .expanded }
-            try? await Task.sleep(for: conversionSettleDuration)
+            withAnimation(effectiveExpansionAnimation) { state = .expanded }
+            try? await Task.sleep(for: expansionConversionSettleDuration)
             guard isCurrent(generation), !Task.isCancelled else { return }
         }
     }
@@ -772,6 +792,17 @@ extension Nook {
         max(transitionConfiguration.animationDuration ?? Self.defaultAnimationDuration, 0)
     }
 
+    /// Settle duration for transitions entering expanded state. A dedicated expansion
+    /// duration leaves compact/hide timing unchanged.
+    var expansionSettleAnimationDuration: TimeInterval {
+        max(
+            transitionConfiguration.expansionAnimationDuration
+                ?? transitionConfiguration.animationDuration
+                ?? Self.defaultAnimationDuration,
+            0
+        )
+    }
+
     /// Settle allowance after a fresh open animation (`.hidden` -> visible) before an
     /// awaited `expand()`/`compact()` returns.
     ///
@@ -786,6 +817,10 @@ extension Nook {
         .seconds(settleAnimationDuration + Self.fadeDuration)
     }
 
+    var expansionOpenSettleDuration: Duration {
+        .seconds(expansionSettleAnimationDuration + Self.fadeDuration)
+    }
+
     /// Settle allowance after a compact ⇄ expanded conversion animation. Like
     /// ``openSettleDuration`` but without the window-show cushion (the window is already
     /// visible). Equal to the configured animation duration; matches the previous
@@ -793,6 +828,10 @@ extension Nook {
     /// into "let the spring settle."
     var conversionSettleDuration: Duration {
         .seconds(settleAnimationDuration)
+    }
+
+    var expansionConversionSettleDuration: Duration {
+        .seconds(expansionSettleAnimationDuration)
     }
 
     /// Dwell at `.hidden` between a close animation and the following conversion (or
@@ -855,6 +894,7 @@ private extension Nook {
         deinitializeWindow()
 
         notchSize = screen.notchFrameWithMenubarAsBackup.size
+        physicalNotchWidth = screen.notchSize?.width ?? 0
         menubarHeight = screen.menubarHeight
         layoutForm = presentation.isFloating(screenHasNotch: screen.hasNotch) ? .floating : .notch
 

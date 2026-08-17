@@ -50,11 +50,11 @@ extension NSScreen {
             return notchFrame
         }
 
-        let arbitraryWidth: CGFloat = 300
+        let virtualNotchWidth: CGFloat = 64
         return NSRect(
-            x: frame.midX - (arbitraryWidth / 2),
+            x: frame.midX - (virtualNotchWidth / 2),
             y: frame.maxY - menubarHeight,
-            width: arbitraryWidth,
+            width: virtualNotchWidth,
             height: menubarHeight
         )
     }

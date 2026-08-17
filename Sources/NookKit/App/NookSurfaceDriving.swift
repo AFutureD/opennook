@@ -82,6 +82,9 @@ protocol NookSurfaceDriving: AnyObject {
     /// Open/close/conversion animation curves.
     var transitionConfiguration: NookTransitionConfiguration { get set }
 
+    /// Host-tunable virtual gap between compact leading and trailing slots.
+    var compactNotchWidth: CGFloat { get set }
+
     /// `true` while the chrome has a live `NSWindow` mounted. The coordinator uses
     /// this to decide whether a re-placement after a display change should reach
     /// for the surface or wait for the next expand/compact to rebuild.

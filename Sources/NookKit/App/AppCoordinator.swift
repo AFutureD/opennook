@@ -315,7 +315,7 @@ public final class AppCoordinator: ObservableObject {
         NSApplication.shared.setActivationPolicy(.accessory)
 
         syncNotchBackdrop()
-        configureNotchAnimations()
+        syncNotchAdjustments()
         configureDisplayTargeting()
 
         registerGlobalHotkey()
@@ -569,7 +569,33 @@ public final class AppCoordinator: ObservableObject {
     /// less overshoot. A host can override the whole set via
     /// ``NookConfiguration/transitions``; otherwise these defaults apply.
     func configureNotchAnimations() {
-        surface.transitionConfiguration = configuration.transitions ?? AppCoordinator.defaultTransitions
+        if let transitions = configuration.transitions {
+            surface.transitionConfiguration = transitions
+            return
+        }
+
+        guard let duration = appState.appearancePreferences.expandAnimationDuration else {
+            surface.transitionConfiguration = AppCoordinator.defaultTransitions
+            return
+        }
+
+        let clampedDuration = max(duration, 0)
+        var transitions = AppCoordinator.defaultTransitions
+        transitions.expansionAnimation = .spring(duration: clampedDuration, bounce: 0.12)
+        transitions.expansionAnimationDuration = clampedDuration
+        surface.transitionConfiguration = transitions
+    }
+
+    /// Projects persisted geometry and motion tuning onto the live surface. Expanded
+    /// width is consumed directly by ``ModuleRouterExpandedView`` from the same
+    /// preferences so SwiftUI can resize without rebuilding the window.
+    func syncNotchAdjustments() {
+        surface.compactNotchWidth = max(
+            appState.appearancePreferences.compactNotchWidth
+                ?? NookGeometryDefaults.compactNotchWidth,
+            0
+        )
+        configureNotchAnimations()
     }
 
     /// The framework's default chrome animation curves, used when a host does not supply
@@ -719,7 +745,10 @@ public final class AppCoordinator: ObservableObject {
         appState.$appearancePreferences
             .dropFirst()
             .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.syncNotchBackdrop() }
+            .sink { [weak self] _ in
+                self?.syncNotchBackdrop()
+                self?.syncNotchAdjustments()
+            }
             .store(in: &cancellables)
 
         accessibilityObserver = ObserverToken(

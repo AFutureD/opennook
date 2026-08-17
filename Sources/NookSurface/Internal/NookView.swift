@@ -71,10 +71,16 @@ where Expanded: View, CompactLeading: View, CompactTrailing: View {
         isFloating ? nook.menubarHeight + 8 : 0
     }
 
+    /// Gap reserved between compact slots. Hosts may tune the virtual width on an
+    /// external display, but a real camera housing always remains the lower bound.
+    private var notchGapWidth: CGFloat {
+        isFloating ? 8 : max(nook.physicalNotchWidth, nook.compactNotchWidth)
+    }
+
     private var minWidth: CGFloat {
         // A floating panel is purely content-driven; only the notch shape needs a
         // minimum (the notch gap plus its ears).
-        isFloating ? 0 : nook.notchSize.width + (topCornerRadius * 2)
+        isFloating ? 0 : notchGapWidth + (topCornerRadius * 2)
     }
 
     private var topCornerRadius: CGFloat {
@@ -126,8 +132,9 @@ where Expanded: View, CompactLeading: View, CompactTrailing: View {
             // flush to the top edge (inset 0). Applied outside the clipped chrome so it
             // shifts the whole shape without distorting it or the hover region.
             .padding(.top, floatingTopInset)
-            .animation(nook.effectiveConversionAnimation, value: nook.state)
+            .animation(nook.effectiveStateConversionAnimation, value: nook.state)
             .animation(nook.effectiveConversionAnimation, value: [compactLeadingWidth, compactTrailingWidth])
+            .animation(nook.effectiveConversionAnimation, value: nook.compactNotchWidth)
     }
 
     /// Peripheral cue overlay. Sits above backdrop+content but inside the compositing group,
@@ -271,7 +278,7 @@ where Expanded: View, CompactLeading: View, CompactTrailing: View {
                 .frame(
                     // Notch mode reserves the notch width while expanded so the
                     // collapsed slots line up; a floating pill is content-driven.
-                    width: (nook.state == .compact || isFloating) ? nil : nook.notchSize.width,
+                    width: (nook.state == .compact || isFloating) ? nil : notchGapWidth,
                     height: (nook.state == .compact && nook.isHovering) ? nook.menubarHeight : nook.notchSize.height
                 )
 
@@ -293,8 +300,8 @@ where Expanded: View, CompactLeading: View, CompactTrailing: View {
             if nook.state == .compact, !nook.disableCompactLeading {
                 nook.compactLeadingContent
                     .safeAreaInset(edge: .leading, spacing: 0) { Color.clear.frame(width: 8) }
-                    .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 4) }
-                    .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 8) }
+                    .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 6) }
+                    .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 6) }
                     .onGeometryChange(for: CGFloat.self, of: \.size.width) { compactLeadingWidth = $0 }
                     .transition(.blur(intensity: 6).combined(with: .scale(x: 0, anchor: .trailing)).combined(with: .opacity))
             }
@@ -303,13 +310,13 @@ where Expanded: View, CompactLeading: View, CompactTrailing: View {
             // straddle the physical notch. Floating mode: no notch - just a small gap
             // keeping the two slots from touching inside the pill.
             Spacer()
-                .frame(width: isFloating ? 8 : nook.notchSize.width)
+                .frame(width: notchGapWidth)
 
             if nook.state == .compact, !nook.disableCompactTrailing {
                 nook.compactTrailingContent
                     .safeAreaInset(edge: .trailing, spacing: 0) { Color.clear.frame(width: 8) }
-                    .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 4) }
-                    .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 8) }
+                    .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 6) }
+                    .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 6) }
                     .onGeometryChange(for: CGFloat.self, of: \.size.width) { compactTrailingWidth = $0 }
                     .transition(.blur(intensity: 6).combined(with: .scale(x: 0, anchor: .leading)).combined(with: .opacity))
             }

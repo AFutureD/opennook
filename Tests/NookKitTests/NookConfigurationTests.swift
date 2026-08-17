@@ -213,10 +213,31 @@ final class NookConfigurationTests: XCTestCase {
     /// curve, and no custom duration).
     @MainActor
     func testDefaultTransitionsApplyWhenUnset() {
-        let coordinator = AppCoordinator(configuration: NookConfiguration())
+        let appState = AppState()
+        appState.appearancePreferences = .default
+        let coordinator = AppCoordinator(appState: appState, configuration: NookConfiguration())
         coordinator.configureNotchAnimations()
 
         XCTAssertNotNil(coordinator.surface.transitionConfiguration.openingAnimation)
+        XCTAssertNil(coordinator.surface.transitionConfiguration.animationDuration)
+    }
+
+    /// Persisted tuning reaches the live surface when the host has not supplied a
+    /// stronger transition override.
+    @MainActor
+    func testPreferenceTuningReachesTheSurface() {
+        let appState = AppState()
+        var preferences = NookAppearancePreferences.default
+        preferences.compactNotchWidth = 92
+        preferences.expandedNotchWidth = 604
+        preferences.expandAnimationDuration = 0.73
+        appState.appearancePreferences = preferences
+
+        let coordinator = AppCoordinator(appState: appState, configuration: NookConfiguration())
+        coordinator.syncNotchAdjustments()
+
+        XCTAssertEqual(coordinator.surface.compactNotchWidth, 92)
+        XCTAssertEqual(coordinator.surface.transitionConfiguration.expansionAnimationDuration, 0.73)
         XCTAssertNil(coordinator.surface.transitionConfiguration.animationDuration)
     }
 

@@ -22,3 +22,4 @@ coverage.lcov
 
 # Internal planning notes - not part of the published framework.
 .notes/
+.vscode

@@ -40,6 +40,18 @@ public struct NookAppearancePreferences: Equatable, Codable, Sendable {
     /// `.translucent`. `1` is the framework default; lower values show more wallpaper.
     public var backdropStrength: Double
 
+    /// Width of the virtual notch gap while compact. `nil` preserves the surface default
+    /// and always yields to a wider physical camera housing on notched displays.
+    public var compactNotchWidth: CGFloat?
+
+    /// Width of the expanded content column. `nil` preserves the host configuration or
+    /// framework default. The chrome's own insets and corner clearance are added outside it.
+    public var expandedNotchWidth: CGFloat?
+
+    /// Duration of hidden-to-expanded and compact-to-expanded animations, in seconds.
+    /// `nil` preserves the host or framework transition configuration.
+    public var expandAnimationDuration: TimeInterval?
+
     public init(
         chromePalette: NookChromePalette = .followSystem,
         surfaceStyle: NookSurfaceStyle = .solid,
@@ -47,7 +59,10 @@ public struct NookAppearancePreferences: Equatable, Codable, Sendable {
         hapticFeedbackEnabled: Bool = false,
         keepNookOpen: Bool = false,
         accentPreset: NookAccentPreset = .system,
-        backdropStrength: Double = 1
+        backdropStrength: Double = 1,
+        compactNotchWidth: CGFloat? = nil,
+        expandedNotchWidth: CGFloat? = nil,
+        expandAnimationDuration: TimeInterval? = nil
     ) {
         self.chromePalette = chromePalette
         self.surfaceStyle = surfaceStyle
@@ -56,6 +71,9 @@ public struct NookAppearancePreferences: Equatable, Codable, Sendable {
         self.keepNookOpen = keepNookOpen
         self.accentPreset = accentPreset
         self.backdropStrength = backdropStrength
+        self.compactNotchWidth = compactNotchWidth
+        self.expandedNotchWidth = expandedNotchWidth
+        self.expandAnimationDuration = expandAnimationDuration
     }
 
     /// Framework defaults - what `NookApp.main()` ships if the host has never written
@@ -70,6 +88,9 @@ public struct NookAppearancePreferences: Equatable, Codable, Sendable {
         case keepNookOpen
         case accentPreset
         case backdropStrength
+        case compactNotchWidth
+        case expandedNotchWidth
+        case expandAnimationDuration
     }
 
     // Custom decode so JSON written by an older build (missing a later-added field)
@@ -86,6 +107,9 @@ public struct NookAppearancePreferences: Equatable, Codable, Sendable {
         self.keepNookOpen = try container.decodeIfPresent(Bool.self, forKey: .keepNookOpen) ?? false
         self.accentPreset = try container.decodeIfPresent(NookAccentPreset.self, forKey: .accentPreset) ?? .system
         self.backdropStrength = try container.decodeIfPresent(Double.self, forKey: .backdropStrength) ?? 1
+        self.compactNotchWidth = try container.decodeIfPresent(CGFloat.self, forKey: .compactNotchWidth)
+        self.expandedNotchWidth = try container.decodeIfPresent(CGFloat.self, forKey: .expandedNotchWidth)
+        self.expandAnimationDuration = try container.decodeIfPresent(TimeInterval.self, forKey: .expandAnimationDuration)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -97,6 +121,9 @@ public struct NookAppearancePreferences: Equatable, Codable, Sendable {
         try container.encode(keepNookOpen, forKey: .keepNookOpen)
         try container.encode(accentPreset, forKey: .accentPreset)
         try container.encode(backdropStrength, forKey: .backdropStrength)
+        try container.encodeIfPresent(compactNotchWidth, forKey: .compactNotchWidth)
+        try container.encodeIfPresent(expandedNotchWidth, forKey: .expandedNotchWidth)
+        try container.encodeIfPresent(expandAnimationDuration, forKey: .expandAnimationDuration)
     }
 }
 

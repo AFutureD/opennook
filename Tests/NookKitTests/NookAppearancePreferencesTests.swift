@@ -28,7 +28,10 @@ final class NookAppearancePreferencesTests: XCTestCase {
             surfaceStyle: .translucent,
             presentation: .floating,
             hapticFeedbackEnabled: true,
-            keepNookOpen: true
+            keepNookOpen: true,
+            compactNotchWidth: 88,
+            expandedNotchWidth: 612,
+            expandAnimationDuration: 0.72
         )
 
         let data = try JSONEncoder().encode(original)
@@ -59,5 +62,8 @@ final class NookAppearancePreferencesTests: XCTestCase {
         XCTAssertEqual(decoded.presentation, .auto)     // default
         XCTAssertFalse(decoded.hapticFeedbackEnabled)   // default
         XCTAssertFalse(decoded.keepNookOpen)            // default
+        XCTAssertNil(decoded.compactNotchWidth)
+        XCTAssertNil(decoded.expandedNotchWidth)
+        XCTAssertNil(decoded.expandAnimationDuration)
     }
 }

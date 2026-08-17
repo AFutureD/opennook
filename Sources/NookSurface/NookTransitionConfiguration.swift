@@ -16,10 +16,16 @@ public struct NookTransitionConfiguration: Sendable {
     public var closingAnimation: Animation?
     /// Compact <-> expanded.
     public var conversionAnimation: Animation?
+    /// Hidden/compact -> expanded only. When nil, falls back to ``conversionAnimation``
+    /// and then the style default. This lets a host tune expansion without changing
+    /// the expanded -> compact motion.
+    public var expansionAnimation: Animation?
     /// When `true`, compact<->expanded skips the intermediate hide-and-show.
     public var skipIntermediateHides: Bool
 
-    /// Longest duration, in seconds, of any animation supplied above.
+    /// Longest duration, in seconds, of opening/closing/conversion animations. A
+    /// separately tuned expansion declares its duration with
+    /// ``expansionAnimationDuration``.
     ///
     /// SwiftUI's `Animation` exposes no portable duration accessor, so the surface cannot
     /// introspect a custom animation to know when it has visibly finished. An awaited
@@ -33,6 +39,10 @@ public struct NookTransitionConfiguration: Sendable {
     /// pass a custom animation whose duration differs materially from the default.
     public var animationDuration: TimeInterval?
 
+    /// Duration of ``expansionAnimation`` only. When nil, expansion uses
+    /// ``animationDuration`` and then the framework default for settle timing.
+    public var expansionAnimationDuration: TimeInterval?
+
     /// Short-lived grace after expanded content resizes. While active, hover-exit
     /// auto-compact is suppressed so a stationary cursor does not dismiss the nook
     /// when the chrome shape shrinks underneath it. `nil` uses the built-in default
@@ -43,15 +53,19 @@ public struct NookTransitionConfiguration: Sendable {
         openingAnimation: Animation? = nil,
         closingAnimation: Animation? = nil,
         conversionAnimation: Animation? = nil,
+        expansionAnimation: Animation? = nil,
         skipIntermediateHides: Bool = false,
         animationDuration: TimeInterval? = nil,
+        expansionAnimationDuration: TimeInterval? = nil,
         layoutGraceDuration: TimeInterval? = nil
     ) {
         self.openingAnimation = openingAnimation
         self.closingAnimation = closingAnimation
         self.conversionAnimation = conversionAnimation
+        self.expansionAnimation = expansionAnimation
         self.skipIntermediateHides = skipIntermediateHides
         self.animationDuration = animationDuration
+        self.expansionAnimationDuration = expansionAnimationDuration
         self.layoutGraceDuration = layoutGraceDuration
     }
 }
