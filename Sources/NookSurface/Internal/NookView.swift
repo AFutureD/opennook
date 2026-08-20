@@ -16,6 +16,7 @@ where Expanded: View, CompactLeading: View, CompactTrailing: View {
     @State private var compactLeadingWidth: CGFloat = 0
     @State private var compactTrailingWidth: CGFloat = 0
     @State private var trackedExpandedSize: CGSize = .zero
+    @State private var chromeSize: CGSize = .zero
     @State private var ambientColor: Color?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -126,7 +127,22 @@ where Expanded: View, CompactLeading: View, CompactTrailing: View {
             .compositingGroup()
             .clipShape(notchShape)
             .contentShape(notchShape)
-            .onHover(perform: nook.updateHoverState)
+            // `.onHover` alone cannot end the hover session while the cursor is
+            // still inside the view's rectangular frame - and the chrome's frame
+            // is the full panel window, far larger than the visible shape. A
+            // cursor parked just below the expanded panel would keep
+            // `isHovering` true forever, pinning the surface open. Continuous
+            // hover + an explicit shape-containment check makes hover state
+            // follow the visible chrome exactly on both entry and exit.
+            .onContinuousHover(coordinateSpace: .local) { phase in
+                switch phase {
+                case .active(let location):
+                    nook.updateHoverState(hoverShapeContains(location))
+                case .ended:
+                    nook.updateHoverState(false)
+                }
+            }
+            .onGeometryChange(for: CGSize.self, of: \.size) { chromeSize = $0 }
             .offset(x: xOffset)
             // Floating mode drops the panel below the menu bar; notch mode keeps it
             // flush to the top edge (inset 0). Applied outside the clipped chrome so it
@@ -156,6 +172,15 @@ where Expanded: View, CompactLeading: View, CompactTrailing: View {
             topCornerRadius: topCornerRadius,
             bottomCornerRadius: bottomCornerRadius
         )
+    }
+
+    /// Whether a local-space cursor location falls inside the visible chrome
+    /// shape (the same ``NookShape`` used for clipping and hit-testing).
+    private func hoverShapeContains(_ location: CGPoint) -> Bool {
+        guard chromeSize.width > 0, chromeSize.height > 0 else { return false }
+        return notchShape
+            .path(in: CGRect(origin: .zero, size: chromeSize))
+            .contains(location)
     }
 
     private func notchBackdrop() -> some View {
