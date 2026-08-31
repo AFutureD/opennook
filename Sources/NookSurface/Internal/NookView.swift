@@ -328,7 +328,7 @@ where Expanded: View, CompactLeading: View, CompactTrailing: View {
                     .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 6) }
                     .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 6) }
                     .onGeometryChange(for: CGFloat.self, of: \.size.width) { compactLeadingWidth = $0 }
-                    .transition(.blur(intensity: 6).combined(with: .scale(x: 0, anchor: .trailing)).combined(with: .opacity))
+                    .transition(.blur(intensity: 6).combined(with: .scale(x: 0.9, y: 0.9)).combined(with: .opacity))
             }
 
             // Notch mode: a gap exactly the notch width, so the leading/trailing slots
@@ -343,7 +343,7 @@ where Expanded: View, CompactLeading: View, CompactTrailing: View {
                     .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 6) }
                     .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 6) }
                     .onGeometryChange(for: CGFloat.self, of: \.size.width) { compactTrailingWidth = $0 }
-                    .transition(.blur(intensity: 6).combined(with: .scale(x: 0, anchor: .leading)).combined(with: .opacity))
+                    .transition(.blur(intensity: 6).combined(with: .scale(x: 0.9, y: 0.9)).combined(with: .opacity))
             }
         }
         .frame(height: nook.notchSize.height)
