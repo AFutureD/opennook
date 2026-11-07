@@ -163,7 +163,9 @@ the main actor first.
 
 Constructing a `ShelfStore` and rendering `NookShelfView` is not enough on
 its own - the drop sink is `NookConfiguration.onFileDrop`. The default
-configuration leaves it `nil`, which rejects every drop. The one-liner
+configuration leaves it `nil`, and a surface without a drop handler ignores
+file drags altogether: it advertises no drop target and does not expand when
+files pass over it. The one-liner
 `configuration.onFileDrop = { urls in shelf.accept(urls) }` is what connects
 them.
 

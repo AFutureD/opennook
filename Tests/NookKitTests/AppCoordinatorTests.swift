@@ -53,9 +53,11 @@ final class AppCoordinatorTests: XCTestCase {
 
     private func makeCoordinator(
         modules: [SpyModule],
-        surface: FakeNookSurface
+        surface: FakeNookSurface,
+        chromeBehavior: NookChromeBehavior = .default
     ) -> AppCoordinator {
         var host = NookHostConfiguration()
+        host.chromeBehavior = chromeBehavior
         for module in modules {
             let captured = module
             host.register(captured.descriptor) { _ in captured }
@@ -190,6 +192,49 @@ final class AppCoordinatorTests: XCTestCase {
         // Module B's hooks are live; we can drive the surface without waiting for A.
         let token = await coordinator.beginTransientPresentation(NookSurfaceClaim(moduleID: "B"))
         XCTAssertNotNil(token, "lifecycle chain unwedged — new claims still flow")
+    }
+
+    /// A host that opts out of the global shortcut never registers it - not at start,
+    /// and not when the dormant preference changes - and reports no failure for it.
+    func testHostCanOptOutOfTheGlobalHotkey() async throws {
+        // Isolated store: `replaceHotkey` persists, and a leaked unmodified key would
+        // make every later test process register it as a real global shortcut.
+        try await PreferenceStoreTestIsolation.withIsolatedStore {
+            let log = ExpandLog()
+            let a = SpyModule(id: "A", expandLog: log)
+            let surface = FakeNookSurface()
+            let coordinator = makeCoordinator(
+                modules: [a],
+                surface: surface,
+                chromeBehavior: NookChromeBehavior(registersGlobalHotkey: false)
+            )
+
+            coordinator.registerGlobalHotkey()
+            XCTAssertFalse(coordinator.hotkeyController.registeredIDsForTesting.contains(NookHotkeyIDs.toggle))
+            XCTAssertNil(coordinator.appState.hotkeyRegistrationFailures[NookHotkeyIDs.toggle])
+
+            // The recorder round trip and a preference change take the same path and
+            // still register nothing.
+            coordinator.bindHotkeyRegistration()
+            let mintedBefore = coordinator.hotkeyController.carbonIDsMintedForTesting
+            coordinator.appState.isRecordingHotkey = true
+            await drainAndPump(coordinator)
+            coordinator.appState.replaceHotkey(NookHotkey(keyCode: 0, carbonModifiers: 0, keySymbol: "a"))
+            coordinator.appState.isRecordingHotkey = false
+            await drainAndPump(coordinator)
+            XCTAssertFalse(coordinator.hotkeyController.registeredIDsForTesting.contains(NookHotkeyIDs.toggle))
+            XCTAssertEqual(coordinator.hotkeyController.carbonIDsMintedForTesting, mintedBefore)
+        }
+    }
+
+    /// A module without a drop handler leaves the surface's `onFileDrop` nil, which is
+    /// what tells the surface to ignore file drags (see `NookSurfaceConcurrencyTests`).
+    func testModuleWithoutDropHandlerLeavesSurfaceDropHandlerNil() {
+        let log = ExpandLog()
+        let a = SpyModule(id: "A", expandLog: log)
+        let surface = FakeNookSurface()
+        _ = makeCoordinator(modules: [a], surface: surface)
+        XCTAssertNil(surface.onFileDrop)
     }
 
     /// `registerGlobalHotkey` records its outcome on the durable failure channel.

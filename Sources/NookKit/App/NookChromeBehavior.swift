@@ -51,14 +51,24 @@ public struct NookChromeBehavior: Sendable {
     /// material, darken, or solid color while still reacting to the live appearance state.
     public var backdrop: BackdropResolver?
 
+    /// Whether the framework registers the global show/hide shortcut
+    /// (``AppState/hotkey``, `Option-Command-;` by default). Defaults to `true`. A host
+    /// that drives the surface only through hover and its own transient presentations
+    /// sets this to `false`: no Carbon hotkey is registered, changing the preference
+    /// registers nothing, and the framework Settings hide the shortcut row. Module
+    /// shortcuts (``NookModuleDescriptor/hotkey``) and the cycle shortcut are unaffected.
+    public var registersGlobalHotkey: Bool
+
     public init(
         hoverBehavior: NookHoverBehavior = [],
         showsLaunchShimmer: Bool = true,
-        backdrop: BackdropResolver? = nil
+        backdrop: BackdropResolver? = nil,
+        registersGlobalHotkey: Bool = true
     ) {
         self.hoverBehavior = hoverBehavior
         self.showsLaunchShimmer = showsLaunchShimmer
         self.backdrop = backdrop
+        self.registersGlobalHotkey = registersGlobalHotkey
     }
 
     /// The framework defaults - what ships when a host sets no chrome behavior. Using

@@ -21,8 +21,27 @@ import XCTest
 @MainActor
 final class NookSurfaceConcurrencyTests: XCTestCase {
 
+    /// A surface with a drop handler installed - the drag-session machine only runs
+    /// for a surface that can accept drops.
     private func makeNook() -> Nook<Text, EmptyView, EmptyView> {
-        Nook(expanded: { Text("x") })
+        let nook = Nook(expanded: { Text("x") })
+        nook.onFileDrop = { _ in true }
+        return nook
+    }
+
+    /// Without a drop handler the surface is not a drop target: no drag operation is
+    /// advertised, no session starts, and nothing expands for a drop that would only
+    /// be rejected.
+    func testDragIsIgnoredWithoutADropHandler() {
+        let nook = Nook(expanded: { Text("x") })
+        XCTAssertNil(nook.onFileDrop)
+
+        let operation = nook.nookPanelDraggingEntered([URL(fileURLWithPath: "/tmp/a")])
+
+        XCTAssertEqual(operation, [])
+        XCTAssertFalse(nook.isDragInFlight)
+        nook.nookPanelDraggingExited()  // out-of-order exit stays a no-op
+        XCTAssertFalse(nook.isDragInFlight)
     }
 
     /// Poll until `condition` is true. Fixed post-`Task.sleep` margins flake on CI when

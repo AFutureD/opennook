@@ -51,6 +51,9 @@ extension Nook: NookDragDestination {
     /// zone is visible; subsequent enters (every `draggingUpdated` forwards here) are
     /// idempotent no-ops that preserve the original snapshot.
     func nookPanelDraggingEntered(_ urls: [URL]) -> NSDragOperation {
+        // No drop handler, no drop target: the surface neither advertises an operation
+        // nor expands for a drop it would only reject.
+        guard onFileDrop != nil else { return [] }
         guard case .idle = dragSession else {
             // Already active - a forwarded `draggingUpdated`, or a duplicate enter.
             // Keep the original snapshot; the advertised operation is unchanged.

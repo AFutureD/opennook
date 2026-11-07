@@ -22,6 +22,9 @@ struct SettingsView: View {
     let hostSections: [NookSettingsSection]
     let onToggleKeepOpen: () -> Void
     let onResetAllSettings: () -> Void
+    /// `false` when the host opted out of the global shortcut
+    /// (``NookChromeBehavior/registersGlobalHotkey``): there is nothing to record.
+    var showsShortcutRow: Bool = true
 
     @Environment(\.nookResolvedTheme) private var theme
     @Environment(\.nookChromeMetrics) private var metrics
@@ -70,7 +73,9 @@ struct SettingsView: View {
 
                 section("Shortcut & nook") {
                     VStack(alignment: .leading, spacing: metrics.settingsGroupSpacing) {
-                        SettingsShortcutRow(appState: appState)
+                        if showsShortcutRow {
+                            SettingsShortcutRow(appState: appState)
+                        }
                         if !appState.hotkeyRegistrationFailures.keys.filter({ $0 != NookHotkeyIDs.toggle }).isEmpty {
                             SettingsHotkeyFailureRow(appState: appState)
                         }

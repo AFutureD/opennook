@@ -162,6 +162,9 @@ where Expanded: View, CompactLeading: View, CompactTrailing: View {
     /// app layer's concern; the engine never sees it.
     ///
     /// `@MainActor`-isolated: invoked from the surface's main-actor drag pipeline.
+    ///
+    /// `nil` (the default) switches file drags off entirely: the panel advertises no drag
+    /// operation and does not auto-expand when files are dragged over it.
     public var onFileDrop: (@MainActor ([URL]) -> Bool)?
 
     /// Fired when the chrome transitions **into** the expanded surface - from any source:
