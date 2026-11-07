@@ -16,12 +16,16 @@ final class SurfaceArbiterTests: XCTestCase {
     @MainActor
     private final class Harness {
         var engaged = false
+        /// A person at the surface (hover, user-opened, pin) - the subset of
+        /// `engaged` that may hold the surface against a restore.
+        var holding = false
         var activeModule = "A"
         var state: NookState = .compact
         private(set) var transitions: [NookState] = []
 
         lazy var arbiter = SurfaceArbiter(
-            isUserEngaged: { self.engaged },
+            isUserEngaged: { self.engaged || self.holding },
+            isUserHoldingSurface: { self.holding },
             activeModuleID: { self.activeModule },
             currentState: { self.state },
             runSerial: { operation in await operation() },
@@ -67,10 +71,28 @@ final class SurfaceArbiterTests: XCTestCase {
         let harness = Harness()
 
         let token = await harness.arbiter.begin(NookSurfaceClaim(moduleID: "A"))
-        harness.engaged = true
+        harness.holding = true
         await harness.arbiter.end(token!)
 
         XCTAssertEqual(harness.state, .expanded, "a user who grabbed the surface keeps it")
+    }
+
+    /// Engagement that is not a hold - the layout-resize grace - gates new claims but
+    /// does not keep the surface from restoring when the last claim ends.
+    func testRestoresThroughNonHoldingEngagement() async {
+        let harness = Harness()
+        harness.state = .compact
+
+        let token = await harness.arbiter.begin(NookSurfaceClaim(moduleID: "A"))
+        XCTAssertNotNil(token)
+        harness.engaged = true
+
+        let denied = await harness.arbiter.begin(NookSurfaceClaim(moduleID: "A", priority: .urgent))
+        XCTAssertNil(denied, "a new claim is still denied while engaged")
+
+        await harness.arbiter.end(token!)
+        XCTAssertEqual(harness.state, .compact, "the restore runs - nobody is holding the surface")
+        XCTAssertFalse(harness.arbiter.isPresenting)
     }
 
     func testGatesBackgroundModuleUnlessUrgent() async {
