@@ -6,6 +6,17 @@ to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- The surface no longer stays expanded after the last transient claim ends while
+  a layout-resize grace is active. `SurfaceArbiter.end` used the same
+  `isUserEngaged` gate as `begin`, and that gate includes the 0.6 s grace that
+  follows any expanded-content resize - so a presenter whose content changed
+  shortly before its claim released (a card swapping back to a list, for
+  example) saw its restore skipped for good and the panel left open with nobody
+  at it. The restore now yields only to a real hold on the surface (hover,
+  user-initiated open, presentation pin); the grace keeps gating new claims.
+
 ### Changed
 
 - The top bar's collapsed leading cluster (shown in Settings and while a module

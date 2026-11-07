@@ -58,6 +58,7 @@ public final class AppCoordinator: ObservableObject {
     lazy var arbiter: SurfaceArbiter = {
         SurfaceArbiter(
             isUserEngaged: { [weak self] in self?.isUserEngaged ?? false },
+            isUserHoldingSurface: { [weak self] in self?.isUserHoldingSurface ?? false },
             activeModuleID: { [weak self] in self?.moduleHost.activeModuleID ?? "" },
             currentState: { [weak self] in self?.surface.state ?? .hidden },
             runSerial: { [weak self] operation in
@@ -968,10 +969,20 @@ extension AppCoordinator: NookSurfacePresenting {
     /// `false`; without the pin, a competing `.urgent` claim from another module would
     /// be granted at that exact moment and yank the surface from under the popover.
     public var isUserEngaged: Bool {
+        isUserHoldingSurface || surface.isLayoutGraceActive
+    }
+
+    /// The user is holding the surface: hovering it, opened it themselves, or a
+    /// module pinned it under a popover/sheet. This is the part of ``isUserEngaged``
+    /// that describes a person at the surface, as opposed to the layout-resize grace,
+    /// which only asks presenters not to start anything new while content settles.
+    /// The arbiter restores the surface after the last transient claim unless the
+    /// user is holding it - a grace alone must not keep the surface open, because
+    /// nothing would restore it once the grace lapses.
+    var isUserHoldingSurface: Bool {
         userInitiatedOpen
             || surface.isHovering
             || presentationPinning.isPinned
-            || surface.isLayoutGraceActive
     }
 
     /// Emits whenever ``isUserEngaged`` changes - the merge of the user-intent flag,

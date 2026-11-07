@@ -799,6 +799,67 @@ final class AppCoordinatorTests: XCTestCase {
         XCTAssertFalse(coordinator.isUserEngaged)
     }
 
+    /// A layout-resize grace gates new claims but is not a hold on the surface: when
+    /// the last transient claim ends while content is still settling, the arbiter
+    /// restores anyway. Otherwise the grace swallows the one restore there is and the
+    /// surface stays expanded with nobody at it - the exact failure a host saw when
+    /// its card swapped back to a list a few hundred milliseconds before the claim
+    /// released.
+    func testArbiterRestoreIgnoresLayoutGrace() async {
+        let log = ExpandLog()
+        let a = SpyModule(id: "A", expandLog: log)
+        let surface = FakeNookSurface()
+        let coordinator = makeCoordinator(modules: [a], surface: surface)
+        await surface.compact(on: nil)
+
+        let token = await coordinator.beginTransientPresentation(NookSurfaceClaim(moduleID: "A"))
+        XCTAssertNotNil(token)
+        XCTAssertEqual(surface.state, .expanded)
+
+        // Content inside the expanded surface resizes just before the claim ends.
+        surface.isLayoutGraceActive = true
+        XCTAssertTrue(coordinator.isUserEngaged, "the grace still counts as engagement for new claims")
+        let denied = await coordinator.beginTransientPresentation(NookSurfaceClaim(moduleID: "A", priority: .urgent))
+        XCTAssertNil(denied, "a new claim is denied while content settles")
+
+        await coordinator.endTransientPresentation(token!)
+        await drainAndPump(coordinator)
+        XCTAssertEqual(
+            surface.state,
+            .compact,
+            "the restore runs through a layout grace - nobody is holding the surface"
+        )
+        XCTAssertEqual(surface.transitions, [.compact, .expanded, .compact])
+    }
+
+    /// The hold that does block the restore is a person at the surface. Hover is the
+    /// everyday case (see `testEngagementMidClaimDoesNotPreemptActiveClaim`); a pin
+    /// under a popover is the other, and a grace stacked on top changes nothing.
+    func testArbiterRestoreYieldsToPinEvenDuringLayoutGrace() async {
+        let log = ExpandLog()
+        let a = SpyModule(id: "A", expandLog: log)
+        let surface = FakeNookSurface()
+        let coordinator = makeCoordinator(modules: [a], surface: surface)
+        await surface.compact(on: nil)
+
+        let token = await coordinator.beginTransientPresentation(NookSurfaceClaim(moduleID: "A"))
+        XCTAssertNotNil(token)
+
+        let pin = coordinator.presentationPinning.pin(reason: "popover")
+        surface.isLayoutGraceActive = true
+        await coordinator.endTransientPresentation(token!)
+        await drainAndPump(coordinator)
+        XCTAssertEqual(surface.state, .expanded, "a pinned surface is left to the module that pinned it")
+
+        pin.release()
+        await drainAndPump(coordinator)
+        XCTAssertEqual(
+            surface.state,
+            .expanded,
+            "releasing the pin does not replay the restore; hover exit will close it"
+        )
+    }
+
     /// A presentation pin held through the post-popover grace window keeps
     /// `staysExpandedOnHoverExit` true until the delayed release runs.
     func testPostPopoverGraceKeepsPinActive() async {

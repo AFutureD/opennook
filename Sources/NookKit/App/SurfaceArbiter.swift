@@ -16,6 +16,11 @@ import NookSurface
 /// - A claim is granted only if it outranks whatever currently holds the surface, the
 ///   user is not engaging the surface, and - for a claim from a background module - its
 ///   priority is `.urgent`.
+/// - When the last claim ends, the surface restores to its pre-presentation state unless
+///   the user is *holding* it - hovering, opened it themselves, or pinned it. Engagement
+///   that only means "don't start anything new" (a layout-resize grace) never blocks the
+///   restore: nothing would run it later, and the surface would be left open with nobody
+///   there.
 /// - A higher-priority claim preempts a lower one: it is pushed on top and shows
 ///   immediately. The preempted claim stays on the stack; when it ends it simply leaves
 ///   the stack without disturbing the surface.
@@ -59,6 +64,7 @@ final class SurfaceArbiter {
     // state (`surface`, `appState`). Annotating the closure types `@MainActor` keeps
     // those captures legal under strict concurrency without crossing actor boundaries.
     private let isUserEngaged: @MainActor () -> Bool
+    private let isUserHoldingSurface: @MainActor () -> Bool
     private let activeModuleID: @MainActor () -> String
     private let currentState: @MainActor () -> NookState
     private let runSerial: @MainActor (@escaping @Sendable @MainActor () async -> Void) async -> Void
@@ -68,6 +74,7 @@ final class SurfaceArbiter {
 
     init(
         isUserEngaged: @escaping @MainActor () -> Bool,
+        isUserHoldingSurface: @escaping @MainActor () -> Bool,
         activeModuleID: @escaping @MainActor () -> String,
         currentState: @escaping @MainActor () -> NookState,
         runSerial: @escaping @MainActor (@escaping @Sendable @MainActor () async -> Void) async -> Void,
@@ -76,6 +83,7 @@ final class SurfaceArbiter {
         hide: @escaping @MainActor () async -> Void
     ) {
         self.isUserEngaged = isUserEngaged
+        self.isUserHoldingSurface = isUserHoldingSurface
         self.activeModuleID = activeModuleID
         self.currentState = currentState
         self.runSerial = runSerial
@@ -178,8 +186,10 @@ final class SurfaceArbiter {
     }
 
     /// Releases the claim for `token`. When it was the last outstanding claim the
-    /// surface restores to its pre-presentation state - unless the user has since
-    /// engaged it, in which case their state is left as-is.
+    /// surface restores to its pre-presentation state - unless the user is holding it
+    /// (hovering, opened it themselves, pinned), in which case their state is left
+    /// as-is. A layout-resize grace is not a hold: it gates new claims through
+    /// ``begin(_:)`` but must not swallow the restore, which has no second chance.
     ///
     /// A token whose module was switched away (or otherwise invalidated) is stale: it is
     /// no longer in `liveTokens`, and `end` is a guaranteed no-op for it. This prevents a
@@ -195,7 +205,7 @@ final class SurfaceArbiter {
 
             let restoreTo = baseRestoreState ?? .compact
             baseRestoreState = nil
-            guard !isUserEngaged() else { return }
+            guard !isUserHoldingSurface() else { return }
             switch restoreTo {
             case .compact: await compact()
             case .hidden: await hide()
