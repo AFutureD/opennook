@@ -85,7 +85,7 @@ process, these are host-process-global either way.
 ## Chrome behavior: `NookChromeBehavior`
 
 `chromeBehavior` describes how the single shared surface *behaves* - distinct
-from the per-surface content and theme seams. It carries three knobs, each
+from the per-surface content and theme seams. It carries four knobs, each
 defaulting to today's framework behavior:
 
 ```swift
@@ -94,9 +94,15 @@ configuration.chromeBehavior = NookChromeBehavior(
     showsLaunchShimmer: false,   // default true: launch silently
     backdrop: { preferences, scheme, reduceTransparency in
         .vibrancy(.init(material: .hudWindow, darkenOpacity: 0.3))
-    }
+    },
+    registersGlobalHotkey: false // default true: skip the Option-Command-; shortcut
 )
 ```
+
+`registersGlobalHotkey: false` is for hosts that open the surface only through
+hover and their own transient presentations: no Carbon shortcut is registered,
+the shortcut preference stays dormant, and the framework Settings hide the
+shortcut row. Module shortcuts and the cycle shortcut are unaffected.
 
 ### Hover behavior
 

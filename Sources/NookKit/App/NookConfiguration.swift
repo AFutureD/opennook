@@ -165,7 +165,9 @@ public struct NookConfiguration: Sendable {
 
     /// Handles a file drop on the notch panel. Return `true` to accept the URLs
     /// (the nook stays expanded so any registration UI is visible), `false` to
-    /// reject. `nil` - the default - rejects all drops.
+    /// reject. `nil` - the default - switches file drags off for this module: the
+    /// panel advertises no drop target and does not expand when files are dragged
+    /// over it.
     ///
     /// `NookComponents`' file shelf wires its `ShelfStore.accept` straight into
     /// this; a host can also route drops through its own import flow.

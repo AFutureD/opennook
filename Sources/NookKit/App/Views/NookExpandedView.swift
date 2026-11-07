@@ -42,6 +42,8 @@ public struct NookExpandedView: View {
     /// Extra host sections appended to the framework's built-in Settings surface (ignored when
     /// ``settings`` replaces it). See ``NookConfiguration/settingsSections``.
     let settingsSections: [NookSettingsSection]
+    /// Mirrors ``NookChromeBehavior/registersGlobalHotkey`` for the framework Settings.
+    let showsShortcutRow: Bool
 
     /// The framework top bar's host-configurable surface - leading cluster, top-bar
     /// visibility, Settings visibility. See ``NookTopBarConfiguration``.
@@ -87,6 +89,7 @@ public struct NookExpandedView: View {
         home: @escaping @Sendable @MainActor () -> AnyView = { AnyView(NookPlaceholderHomeView()) },
         settings: (@Sendable @MainActor () -> AnyView)? = nil,
         settingsSections: [NookSettingsSection] = [],
+        showsShortcutRow: Bool = true,
         topBar: NookTopBarConfiguration = .default,
         labels: NookChromeLabels = .default,
         metrics: NookChromeMetrics = .default,
@@ -104,6 +107,7 @@ public struct NookExpandedView: View {
         self.home = home
         self.settings = settings
         self.settingsSections = settingsSections
+        self.showsShortcutRow = showsShortcutRow
         self.topBar = topBar
         self.labels = labels
         self.metrics = metrics
@@ -257,7 +261,8 @@ public struct NookExpandedView: View {
                 appState: appState,
                 hostSections: settingsSections,
                 onToggleKeepOpen: toggleKeepOpen,
-                onResetAllSettings: resetAllSettings
+                onResetAllSettings: resetAllSettings,
+                showsShortcutRow: showsShortcutRow
             )
         }
     }

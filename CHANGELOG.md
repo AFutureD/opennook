@@ -6,18 +6,23 @@ to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Fixed
+### Added
 
-- The surface no longer stays expanded after the last transient claim ends while
-  a layout-resize grace is active. `SurfaceArbiter.end` used the same
-  `isUserEngaged` gate as `begin`, and that gate includes the 0.6 s grace that
-  follows any expanded-content resize - so a presenter whose content changed
-  shortly before its claim released (a card swapping back to a list, for
-  example) saw its restore skipped for good and the panel left open with nobody
-  at it. The restore now yields only to a real hold on the surface (hover,
-  user-initiated open, presentation pin); the grace keeps gating new claims.
+- `NookChromeBehavior.registersGlobalHotkey` (default `true`). A host that
+  drives the surface only through hover and its own transient presentations
+  can set it to `false`: the global show/hide shortcut is never registered,
+  changing the shortcut preference registers nothing, and the framework
+  Settings hide the shortcut row. Module and cycle shortcuts are unaffected.
+  `NookExpandedView.init` gains a matching `showsShortcutRow` parameter
+  (default `true`).
 
 ### Changed
+
+- A surface without a drop handler no longer reacts to file drags. With
+  `NookConfiguration.onFileDrop` (or `Nook.onFileDrop`) left `nil`, the panel
+  advertises no drag operation and does not auto-expand when files pass over
+  it; previously it expanded for a drop it would then reject. Hosts that
+  accept drops are unchanged.
 
 - The top bar's collapsed leading cluster (shown in Settings and while a module
   breadcrumb is active) keeps the host identity glyph - the configured
@@ -28,6 +33,15 @@ to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   click-to-go-back control with the same hover title reveal.
 
 ### Fixed
+
+- The surface no longer stays expanded after the last transient claim ends while
+  a layout-resize grace is active. `SurfaceArbiter.end` used the same
+  `isUserEngaged` gate as `begin`, and that gate includes the 0.6 s grace that
+  follows any expanded-content resize - so a presenter whose content changed
+  shortly before its claim released (a card swapping back to a list, for
+  example) saw its restore skipped for good and the panel left open with nobody
+  at it. The restore now yields only to a real hold on the surface (hover,
+  user-initiated open, presentation pin); the grace keeps gating new claims.
 
 - Light theme + Liquid Glass no longer turns illegible over dark wallpapers or
   windows. Apple's macOS 26 glass material adapts its light/dark treatment to

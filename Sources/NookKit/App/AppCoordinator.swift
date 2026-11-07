@@ -505,7 +505,10 @@ public final class AppCoordinator: ObservableObject {
         surface.onExpand = configuration.onExpand
         surface.onCompact = configuration.onCompact
         surface.onHide = configuration.onHide
-        surface.onFileDrop = configuration.onFileDrop ?? { _ in false }
+        // Passed through as-is: a module without a drop handler leaves the surface
+        // with `nil`, and the surface then ignores file drags altogether instead of
+        // expanding for a drop it would reject.
+        surface.onFileDrop = configuration.onFileDrop
     }
 
     /// Switches to the next registered module, wrapping around. No-op for a host with a
@@ -617,6 +620,9 @@ public final class AppCoordinator: ObservableObject {
     /// Registers the current `appState.hotkey` as the global show/hide shortcut.
     /// Skipped while the user is mid-recording so the old shortcut can't fire.
     func registerGlobalHotkey() {
+        // A host that opted out never holds the shortcut - not at launch, and not when
+        // the (now dormant) preference changes.
+        guard moduleHost.chromeBehavior.registersGlobalHotkey else { return }
         guard !appState.isRecordingHotkey else { return }
 
         let hotkey = appState.hotkey

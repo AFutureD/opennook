@@ -30,7 +30,8 @@ known-good starting point to fork.
 
 Collapsed, the nook is a compact pill in the menu-bar notch (customizable
 leading/trailing slots). Hover to expand on desktop, or press **⌥⌘;** to
-toggle. Expanded, you get framework chrome (top bar, lock, settings) around
+toggle (hosts can opt out of the shortcut with
+`NookChromeBehavior.registersGlobalHotkey`). Expanded, you get framework chrome (top bar, lock, settings) around
 the view you register. Layout follows the display: notch-fused on notched
 panels, floating capsule elsewhere (`NookPresentation`, overridable in
 Settings). The shelf above is from `Examples/ShelfNook` via optional
